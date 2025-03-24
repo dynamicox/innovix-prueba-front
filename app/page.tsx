@@ -1,95 +1,89 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+import { fetchPhotos } from "@/lib/api";
+import theme from "@/lib/theme";
+import { MarsImage } from "@/lib/types";
+import { Box, Button, ImageList, useMediaQuery } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import ImageCard from "@/components/molecules/ImageCard/ImageCard";
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
+  const [page, setPage] = useState(1);
+  const [deletedIds, setDeletedIds] = useState<MarsImage["id"][]>([]);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const { data, isLoading, isError, isFetching } = useQuery<MarsImage[]>({
+    queryKey: ["marsPhotos"],
+    queryFn: () => fetchPhotos(),
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+  });
+
+  const [images, setImages] = useState<MarsImage[]>([]);
+
+  useEffect(() => {
+    if (data) {
+      const newImages = data
+        .slice(0, page * 12)
+        .filter((item) => !deletedIds.includes(item.id));
+      setImages(newImages);
+    }
+  }, [data, page, deletedIds]);
+
+  if (isLoading || isFetching) {
+    return <>Loading</>;
+  }
+
+  if (isError) {
+    return <>Error</>;
+  }
+
+  const handleDelete = (id: MarsImage["id"]) => {
+    setDeletedIds((prev) => [...prev, id]);
+  };
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflowY: "scroll",
+      }}
+    >
+      <Box sx={{ marginTop: 16, paddingX: 2 }}>
+        <ImageList variant="quilted" cols={isSmallScreen ? 1 : 3} gap={6}>
+          {images.map((item, idx) => (
+            <ImageCard data={item} key={idx} handleDelete={handleDelete} />
+          ))}
+        </ImageList>
+
+        <Box
+          sx={{
+            width: "100%",
+            display: "flex",
+            justifyContent: "center",
+            py: {
+              xs: 2,
+              lg: 8,
+            },
+          }}
+        >
+          <Button
+            variant="contained"
+            size="large"
+            fullWidth={isSmallScreen}
+            onClick={() => setPage((prev) => prev + 1)}
+            sx={{
+              px: {
+                lg: 20,
+              },
+            }}
           >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+            CARGAR MAS
+          </Button>
+        </Box>
+      </Box>
+    </Box>
   );
 }
